@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS request for CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "POST without credentials returns error",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "amount": 15000,
+        "package_name": "Базовый",
+        "customer_email": "test@example.com"
+      },
+      "expectedStatus": 500,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET without payment_id returns error",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "payment_id required"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

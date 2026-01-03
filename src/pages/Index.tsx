@@ -73,13 +73,11 @@ const testimonials = [
 const Index = () => {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<typeof packages[0] | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",
-    cardNumber: "",
-    cardExpiry: "",
-    cardCvv: ""
+    phone: ""
   });
 
   const handleBuyClick = (pkg: typeof packages[0]) => {
@@ -87,18 +85,40 @@ const Index = () => {
     setIsPaymentOpen(true);
   };
 
-  const handlePayment = (e: React.FormEvent) => {
+  const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Оплата ${selectedPackage?.price} успешно обработана! Мы свяжемся с вами в ближайшее время.`);
-    setIsPaymentOpen(false);
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      cardNumber: "",
-      cardExpiry: "",
-      cardCvv: ""
-    });
+    if (!selectedPackage) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      const response = await fetch('https://functions.poehali.dev/6e8d770f-759a-4c81-aa10-18576fd481ec', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: selectedPackage.priceValue,
+          package_name: selectedPackage.name,
+          customer_email: formData.email,
+          customer_name: formData.name,
+          customer_phone: formData.phone
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.confirmation_url) {
+        window.location.href = data.confirmation_url;
+      } else {
+        alert('Ошибка при создании платежа. Попробуйте позже.');
+      }
+    } catch (error) {
+      alert('Произошла ошибка. Пожалуйста, попробуйте позже.');
+      console.error(error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -319,6 +339,7 @@ const Index = () => {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
+                disabled={isProcessing}
               />
             </div>
             <div className="space-y-2">
@@ -330,6 +351,7 @@ const Index = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
+                disabled={isProcessing}
               />
             </div>
             <div className="space-y-2">
@@ -341,50 +363,27 @@ const Index = () => {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
+                disabled={isProcessing}
               />
             </div>
-            <div className="border-t pt-4 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="cardNumber">Номер карты</Label>
-                <Input
-                  id="cardNumber"
-                  placeholder="1234 5678 9012 3456"
-                  value={formData.cardNumber}
-                  onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
-                  maxLength={19}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cardExpiry">Срок действия</Label>
-                  <Input
-                    id="cardExpiry"
-                    placeholder="ММ/ГГ"
-                    value={formData.cardExpiry}
-                    onChange={(e) => setFormData({ ...formData, cardExpiry: e.target.value })}
-                    maxLength={5}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cardCvv">CVV</Label>
-                  <Input
-                    id="cardCvv"
-                    placeholder="123"
-                    value={formData.cardCvv}
-                    onChange={(e) => setFormData({ ...formData, cardCvv: e.target.value })}
-                    maxLength={3}
-                    type="password"
-                    required
-                  />
-                </div>
-              </div>
+            <div className="border-t pt-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                После нажатия кнопки вы будете перенаправлены на безопасную страницу оплаты ЮKassa
+              </p>
+              <Button type="submit" className="w-full" size="lg" disabled={isProcessing}>
+                {isProcessing ? (
+                  <>
+                    <Icon name="Loader2" size={20} className="mr-2 animate-spin" />
+                    Создание платежа...
+                  </>
+                ) : (
+                  <>
+                    <Icon name="CreditCard" size={20} className="mr-2" />
+                    Перейти к оплате {selectedPackage?.price}
+                  </>
+                )}
+              </Button>
             </div>
-            <Button type="submit" className="w-full" size="lg">
-              <Icon name="CreditCard" size={20} className="mr-2" />
-              Оплатить {selectedPackage?.price}
-            </Button>
           </form>
         </DialogContent>
       </Dialog>
